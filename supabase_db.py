@@ -7,8 +7,8 @@ import os
 from typing import List, Tuple
 from supabase import create_client, Client  # Agora importa da biblioteca 'supabase-py'
 
-SUPABASE_URL = os.getenv("SUPABASE_URL", "<SUA_URL_SUPABASE>")
-SUPABASE_KEY = os.getenv("SUPABASE_KEY", "<SUA_CHAVE_SUPABASE>")
+SUPABASE_URL = os.getenv("SUPABASE_URL", "https://virdqpnbjolwocpsmafw.supabase.co")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZpcmRxcG5iam9sd29jcHNtYWZ3Iiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc0MjUwMTkwOCwiZXhwIjoyMDU4MDc3OTA4fQ.sU2-IkLtpGbbUaYQXja50imYjf82i0RKCtAQi3vdbk4")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def create_table():
