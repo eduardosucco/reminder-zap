@@ -49,3 +49,26 @@ def listar_remedios() -> List[Tuple]:
 
 def remover_remedio(remedio_id: int) -> None:
     supabase.table("remedios").delete().eq("id", remedio_id).execute()
+
+def atualizar_remedio(remedio_id: int,
+                      nome: str,
+                      quantidade: str,
+                      frequencia: str,
+                      telefone: str,
+                      data_inicio: str,
+                      data_fim: str) -> None:
+    """
+    Atualiza as informações de um remédio pelo ID, alterando os campos.
+    As datas devem ser passadas em formato YYYY-MM-DD.
+    """
+    supabase.table("remedios") \
+        .update({
+            "nome": nome,
+            "quantidade": quantidade,
+            "frequencia": frequencia,
+            "telefone": telefone,
+            "data_inicio": data_inicio,
+            "data_fim": data_fim
+        }) \
+        .eq("id", remedio_id) \
+        .execute()
