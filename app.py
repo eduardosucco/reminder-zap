@@ -2,24 +2,42 @@ import streamlit as st
 import datetime
 import pandas as pd
 
-# Importe as funções do seu módulo supabase_db (renomeado para evitar conflito)
+# Importe as funções do seu módulo supabase_db (ou outro nome que não seja 'supabase.py')
 from supabase_db import create_table, inserir_remedio, listar_remedios, remover_remedio
+
+def formatar_data_br(data_iso: str) -> str:
+    """
+    Converte 'YYYY-MM-DD' para 'DD/MM/AAAA'.
+    Se não for uma data válida ou vier vazia, retorna o valor original sem formato.
+    """
+    if not data_iso:
+        return ""
+    try:
+        dt = datetime.datetime.strptime(data_iso, "%Y-%m-%d")
+        return dt.strftime("%d/%m/%Y")
+    except ValueError:
+        return data_iso
 
 def exibir_cadastro():
     st.subheader("Cadastrar Remédio")
+
+    # Pedimos a data em PT-BR apenas como indicação visual;
+    # O widget date_input depende do locale do navegador, mas armazenamos e exibimos manualmente
+    hoje = datetime.date.today()
 
     nome = st.text_input("Nome do remédio")
     quantidade = st.text_input("Quantidade (ex: 5ml, 1 comprimido)")
     frequencia = st.text_input("Frequência (ex: a cada 8 horas)")
     telefone = st.text_input("WhatsApp (ex: +5521981664493)")
-    data_inicio = st.date_input("Data de início", datetime.date.today())
-    data_fim = st.date_input("Data de término", datetime.date.today())
+    data_inicio = st.date_input("Data de início (DD/MM/AAAA)", hoje)
+    data_fim = st.date_input("Data de término (DD/MM/AAAA)", hoje)
 
     if st.button("Salvar Novo Remédio"):
         if not (nome and quantidade and frequencia and telefone):
-            st.error("Preencha todos os campos obrigatórios.")
+            st.error("Por favor, preencha todos os campos obrigatórios.")
             return
 
+        # Armazena no banco como YYYY-MM-DD (ISO)
         inserir_remedio(
             nome=nome,
             quantidade=quantidade,
@@ -30,7 +48,6 @@ def exibir_cadastro():
         )
         st.success(f"Remédio '{nome}' cadastrado com sucesso!")
 
-
 def exibir_gerenciamento():
     st.subheader("Gerenciamento de Remédios")
     dados = listar_remedios()
@@ -39,11 +56,8 @@ def exibir_gerenciamento():
         st.info("Não há remédios cadastrados.")
         return
 
-    # Cabeçalho da "tabela"
-    # layout: 1 col (ID) + 2 col (Nome) + 2 col (Qtd) + 2 col (Freq) + 2 col (Tel)
-    #         + 2 col (Início) + 2 col (Término) + 2 col (Ações)
-    # Você pode ajustar os tamanhos se quiser
-    cab = st.columns([1, 2, 2, 2, 2, 2, 2, 3])
+    # Cabeçalhos da "tabela" manual
+    cab = st.columns([1, 2, 2, 2, 3, 2, 2, 2])
     cab[0].markdown("**ID**")
     cab[1].markdown("**Nome**")
     cab[2].markdown("**Qtd**")
@@ -54,43 +68,49 @@ def exibir_gerenciamento():
     cab[7].markdown("**Ações**")
 
     for row in dados:
-        r_id, r_nome, r_qtd, r_freq, r_tel, r_inicio, r_fim = row
+        r_id, r_nome, r_qtd, r_freq, r_tel, r_inicio_iso, r_fim_iso = row
 
-        cols = st.columns([1, 2, 2, 2, 2, 2, 2, 3])
+        # Converter datas para PT-BR
+        r_inicio_br = formatar_data_br(r_inicio_iso)
+        r_fim_br = formatar_data_br(r_fim_iso)
+
+        cols = st.columns([1, 2, 2, 2, 3, 2, 2, 2])
         cols[0].write(r_id)
         cols[1].write(r_nome)
         cols[2].write(r_qtd)
         cols[3].write(r_freq)
         cols[4].write(r_tel)
-        cols[5].write(r_inicio)
-        cols[6].write(r_fim)
+        cols[5].write(r_inicio_br)
+        cols[6].write(r_fim_br)
 
-        # Na última coluna, criamos 2 sub-colunas para botões Editar e Remover
+        # Última coluna: botões alinhados (somente ícones)
         with cols[7]:
-            col_a, col_b = st.columns([1,1])
-            with col_a:
-                editar_btn = st.button("Editar", key=f"edit_{r_id}")
-            with col_b:
-                remover_btn = st.button("Remover", key=f"del_{r_id}")
+            # Dividir em duas colunas iguais dentro dessa coluna (para lápis e xis)
+            col_edit, col_del = st.columns([1,1])
 
-            # Lógica dos botões
+            with col_edit:
+                editar_btn = st.button("✏️", key=f"edit_{r_id}", help="Editar este remédio")
+            with col_del:
+                remover_btn = st.button("❌", key=f"del_{r_id}", help="Remover este remédio")
+
             if editar_btn:
-                st.info(f"[Mock] Editar remédio ID {r_id}. Implemente a lógica aqui.")
+                # Exemplo simples de mensagem
+                st.info(f"[Mock] Você clicou em editar o remédio ID={r_id}.")
+                # Para editar de verdade, criar uma função atualizar_remedio(...) no supabase_db.
             
             if remover_btn:
                 remover_remedio(r_id)
                 st.warning(f"Remédio ID {r_id} removido!")
                 st.experimental_rerun()
 
-
 def main():
-    # Define layout "centered" para não ocupar toda a largura
+    # Layout "centered" para não ocupar toda a largura
     st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
     st.title("Gerenciador de Remédios (Supabase)")
 
     create_table()  # Se já existe, não faz nada
 
-    # Tabs para separar Cadastro e Gerenciamento
+    # Duas abas para separar Cadastro de Gerenciamento
     tab_cadastro, tab_gerencia = st.tabs(["Cadastro", "Gerenciamento"])
 
     with tab_cadastro:
@@ -98,7 +118,6 @@ def main():
 
     with tab_gerencia:
         exibir_gerenciamento()
-
 
 if __name__ == "__main__":
     main()
