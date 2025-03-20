@@ -2,7 +2,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 
-from supabase import create_table, inserir_remedio, listar_remedios, remover_remedio
+from supabase_db import create_table, inserir_remedio, listar_remedios, remover_remedio
 
 def exibir_cadastro():
     st.subheader("Cadastrar Remédio")
