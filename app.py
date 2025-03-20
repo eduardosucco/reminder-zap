@@ -2,29 +2,24 @@ import streamlit as st
 import datetime
 import pandas as pd
 
-# Importe as funções do seu arquivo local (renomeado para 'supabase_db.py')
+# Importe as funções do seu módulo supabase_db (renomeado para evitar conflito)
 from supabase_db import create_table, inserir_remedio, listar_remedios, remover_remedio
-
 
 def exibir_cadastro():
     st.subheader("Cadastrar Remédio")
 
-    # Campos do formulário
     nome = st.text_input("Nome do remédio")
     quantidade = st.text_input("Quantidade (ex: 5ml, 1 comprimido)")
     frequencia = st.text_input("Frequência (ex: a cada 8 horas)")
-    telefone = st.text_input("Telefone (WhatsApp) - Ex: +5521981664493")
+    telefone = st.text_input("WhatsApp (ex: +5521981664493)")
     data_inicio = st.date_input("Data de início", datetime.date.today())
     data_fim = st.date_input("Data de término", datetime.date.today())
 
-    # Botão para salvar
     if st.button("Salvar Novo Remédio"):
-        # Validação simples
         if not (nome and quantidade and frequencia and telefone):
-            st.error("Por favor, preencha todos os campos obrigatórios.")
+            st.error("Preencha todos os campos obrigatórios.")
             return
 
-        # Inserindo via Supabase
         inserir_remedio(
             nome=nome,
             quantidade=quantidade,
@@ -38,64 +33,64 @@ def exibir_cadastro():
 
 def exibir_gerenciamento():
     st.subheader("Gerenciamento de Remédios")
-
     dados = listar_remedios()
+
     if not dados:
         st.info("Não há remédios cadastrados.")
         return
 
-    # Layout em colunas simulando um cabeçalho de tabela
-    # Ajuste as proporções (list) para deixar mais ou menos espaço
-    cab1, cab2, cab3, cab4, cab5, cab6, cab7, cab8 = st.columns([1, 2, 2, 2, 2, 2, 2, 2])
-    cab1.markdown("**ID**")
-    cab2.markdown("**Nome**")
-    cab3.markdown("**Qtd**")
-    cab4.markdown("**Frequência**")
-    cab5.markdown("**Telefone**")
-    cab6.markdown("**Início**")
-    cab7.markdown("**Término**")
-    cab8.markdown("**Ações**")
+    # Cabeçalho da "tabela"
+    # layout: 1 col (ID) + 2 col (Nome) + 2 col (Qtd) + 2 col (Freq) + 2 col (Tel)
+    #         + 2 col (Início) + 2 col (Término) + 2 col (Ações)
+    # Você pode ajustar os tamanhos se quiser
+    cab = st.columns([1, 2, 2, 2, 2, 2, 2, 3])
+    cab[0].markdown("**ID**")
+    cab[1].markdown("**Nome**")
+    cab[2].markdown("**Qtd**")
+    cab[3].markdown("**Frequência**")
+    cab[4].markdown("**Telefone**")
+    cab[5].markdown("**Início**")
+    cab[6].markdown("**Término**")
+    cab[7].markdown("**Ações**")
 
-    # Para cada remédio, criamos uma "linha" com colunas
     for row in dados:
-        r_id, r_nome, r_qtd, r_freq, r_tel, r_inicio, r_fim = row  # 7 colunas do Supabase
+        r_id, r_nome, r_qtd, r_freq, r_tel, r_inicio, r_fim = row
 
-        c1, c2, c3, c4, c5, c6, c7, c8 = st.columns([1, 2, 2, 2, 2, 2, 2, 2])
+        cols = st.columns([1, 2, 2, 2, 2, 2, 2, 3])
+        cols[0].write(r_id)
+        cols[1].write(r_nome)
+        cols[2].write(r_qtd)
+        cols[3].write(r_freq)
+        cols[4].write(r_tel)
+        cols[5].write(r_inicio)
+        cols[6].write(r_fim)
 
-        c1.write(r_id)
-        c2.write(r_nome)
-        c3.write(r_qtd)
-        c4.write(r_freq)
-        c5.write(r_tel)
-        c6.write(r_inicio)
-        c7.write(r_fim)
-
-        # Na última coluna, colocamos botões "Editar" e "Remover"
-        with c8:
-            editar_btn = st.button("Editar", key=f"editar_{r_id}")
-            remover_btn = st.button("Remover", key=f"remover_{r_id}")
+        # Na última coluna, criamos 2 sub-colunas para botões Editar e Remover
+        with cols[7]:
+            col_a, col_b = st.columns([1,1])
+            with col_a:
+                editar_btn = st.button("Editar", key=f"edit_{r_id}")
+            with col_b:
+                remover_btn = st.button("Remover", key=f"del_{r_id}")
 
             # Lógica dos botões
             if editar_btn:
-                # Exemplo simples: mensagem.
-                # Você pode criar um modal/formulário para editar efetivamente o remédio.
-                st.info(f"Editar remédio '{r_nome}' (ID={r_id}). Implementar lógica de edição.")
+                st.info(f"[Mock] Editar remédio ID {r_id}. Implemente a lógica aqui.")
             
             if remover_btn:
                 remover_remedio(r_id)
                 st.warning(f"Remédio ID {r_id} removido!")
-                st.experimental_rerun()  # Atualiza a página para sumir com a linha removida.
+                st.experimental_rerun()
 
 
 def main():
-    # Configura título e layout
-    st.set_page_config(page_title="Gerenciador de Remédios", layout="wide")
+    # Define layout "centered" para não ocupar toda a largura
+    st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
     st.title("Gerenciador de Remédios (Supabase)")
 
-    # Garante que a função exista, mesmo que não crie a tabela (já criada no painel do Supabase)
-    create_table()
+    create_table()  # Se já existe, não faz nada
 
-    # Usamos aba (tabs) para melhorar visual do "menu"
+    # Tabs para separar Cadastro e Gerenciamento
     tab_cadastro, tab_gerencia = st.tabs(["Cadastro", "Gerenciamento"])
 
     with tab_cadastro:
