@@ -1,7 +1,8 @@
 import streamlit as st
 import datetime
 import pandas as pd
-from database import create_table, inserir_remedio, listar_remedios
+
+from supabase import create_table, inserir_remedio, listar_remedios, remover_remedio
 
 def exibir_cadastro():
     st.subheader("Cadastrar Remédio")
@@ -14,7 +15,7 @@ def exibir_cadastro():
     data_fim = st.date_input("Data de término", datetime.date.today())
 
     if st.button("Salvar"):
-        if not nome or not quantidade or not frequencia or not telefone:
+        if not (nome and quantidade and frequencia and telefone):
             st.error("Por favor, preencha todos os campos.")
         else:
             inserir_remedio(
@@ -30,14 +31,16 @@ def exibir_cadastro():
 def exibir_lista():
     st.subheader("Lista de Remédios Cadastrados")
     dados = listar_remedios()
+
     if not dados:
         st.info("Não há remédios cadastrados.")
         return
 
-    # Converte a lista de tuplas em DataFrame
+    # Converte para DataFrame
     colunas = ["ID", "Nome", "Quantidade", "Frequência", "Telefone", "Início", "Término"]
     registros = []
     for row in dados:
+        # row no formato (id, nome, quantidade, frequencia, telefone, data_inicio, data_fim)
         registros.append({
             "ID": row[0],
             "Nome": row[1],
@@ -49,12 +52,22 @@ def exibir_lista():
         })
     df = pd.DataFrame(registros, columns=colunas)
 
-    # Exibe tabela simples
     st.dataframe(df, use_container_width=True)
+
+    # Botões de Remover para cada registro
+    st.markdown("### Remover um Remédio pelo ID")
+    id_para_remover = st.number_input("Digite o ID do remédio para remover", min_value=1, value=1, step=1)
+    if st.button("Remover Remédio"):
+        remover_remedio(int(id_para_remover))
+        st.warning(f"Remédio ID {id_para_remover} removido.")
+        st.experimental_rerun()
 
 def main():
     st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
-    st.title("Gerenciador de Remédios")
+    st.title("Gerenciador de Remédios (Supabase)")
+
+    # Chama a função create_table() (aqui é no-op, mas deixamos por convenção)
+    create_table()
 
     menu = st.sidebar.radio("Selecione a página:", ("Cadastro", "Lista"))
 
@@ -64,5 +77,4 @@ def main():
         exibir_lista()
 
 if __name__ == "__main__":
-    create_table()
     main()
