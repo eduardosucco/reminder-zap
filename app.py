@@ -27,68 +27,62 @@ def data_iso(br: str) -> str:
         return br
 
 def tela_gerenciamento():
-    """Aba de Gerenciamento:
-       - Exibe tabela (excluido='N'),
-       - Botão 'Cadastrar Novo',
-       - Em cada linha: Editar e Excluir (com st.rerun() após clique).
-    """
+    """Aba inicial: exibe tabela e botões para Cadastrar Novo, Editar e Excluir."""
     st.subheader("Gerenciamento de Remédios")
 
-    # Botão para cadastrar novo remédio
+    # Botão para cadastrar novo
     if st.button("Cadastrar Novo"):
-        # Limpa qualquer ID em edição
-        st.session_state["edit_id"] = None
-        st.session_state["aba_ativa"] = 1
-        st.rerun()  # Redireciona imediatamente para a outra aba
+        st.session_state["edit_id"] = None  # garantia de que não estamos editando
+        st.session_state["aba_ativa"] = 1   # vai para aba Cadastro/Edição
+        st.rerun()
 
-    dados = listar_remedios()  # itens excluido='N'
+    dados = listar_remedios()  # Retorna apenas excluido='N'
     if not dados:
-        st.info("Não há remédios cadastrados.")
+        st.info("Nenhum remédio cadastrado.")
         return
 
-    # Cabeçalhos manual: ID, Nome, Qtd, Freq, Período, [Editar], [Excluir]
-    c1, c2, c3, c4, c5, c6, c7 = st.columns([1, 2, 2, 2, 2, 1, 1])
-    c1.write("**ID**")
-    c2.write("**Nome**")
-    c3.write("**Qtd**")
-    c4.write("**Freq**")
-    c5.write("**Período**")
-    c6.write("**✏**")
-    c7.write("**❌**")
+    # Cabeçalhos: ID, Nome, Qtd, Freq, Período, [✏], [❌]
+    cols_header = st.columns([1, 2, 2, 2, 2, 1, 1])
+    cols_header[0].write("**ID**")
+    cols_header[1].write("**Nome**")
+    cols_header[2].write("**Qtd**")
+    cols_header[3].write("**Freq**")
+    cols_header[4].write("**Período**")
+    cols_header[5].write("**✏**")
+    cols_header[6].write("**❌**")
 
     for (rid, nome, qtd, freq, _tel, di, df, _exc) in dados:
-        col1, col2, col3, col4, col5, col6, col7 = st.columns([1, 2, 2, 2, 2, 1, 1])
-        col1.write(rid)
-        col2.write(nome)
-        col3.write(qtd)
-        col4.write(freq)
-        col5.write(f"{data_br(di)} → {data_br(df)}")
+        c1, c2, c3, c4, c5, c6, c7 = st.columns([1, 2, 2, 2, 2, 1, 1])
+        c1.write(rid)
+        c2.write(nome)
+        c3.write(qtd)
+        c4.write(freq)
+        c5.write(f"{data_br(di)} → {data_br(df)}")
 
-        editar = col6.button("✏", key=f"edit_{rid}")
-        excluir = col7.button("❌", key=f"del_{rid}")
+        editar = c6.button("✏", key=f"edit_{rid}")
+        excluir = c7.button("❌", key=f"del_{rid}")
 
         if editar:
+            # Preenche dados de edição e muda de aba
             st.session_state["edit_id"] = rid
             st.session_state["edit_nome"] = nome
             st.session_state["edit_qtd"] = qtd
             st.session_state["edit_freq"] = freq
             st.session_state["edit_ini"] = data_br(di)
             st.session_state["edit_fim"] = data_br(df)
-
             st.session_state["aba_ativa"] = 1
-            st.rerun()  # Força recarregar, indo para aba de cadastro/edição
+            st.rerun()
 
         if excluir:
-            marcar_excluido(rid)  # excluido='S'
-            st.warning(f"Remédio ID {rid} foi excluído.")
-            st.rerun()  # Atualiza a listagem (item some)
+            marcar_excluido(rid)
+            st.warning(f"Remédio ID {rid} excluído.")
+            st.rerun()
 
 def tela_cadastro_edicao():
     """
-    Aba de Cadastro/Edição:
-      - Se 'edit_id' estiver definido, entramos em modo edição
-      - Caso contrário, novo cadastro
-      - Após Salvar/Cancelar, chamamos st.rerun() para atualizar
+    Aba 2: se 'edit_id' existir, exibimos edição;
+    caso contrário, exibimos cadastro de novo remédio.
+    Ao salvar, voltamos para Gerenciamento (aba_ativa=0).
     """
     edit_id = st.session_state.get("edit_id", None)
     if edit_id is not None:
@@ -106,12 +100,12 @@ def tela_cadastro_edicao():
                 nome=nome,
                 quantidade=qtd,
                 frequencia=freq,
-                telefone="",  # se quiser manipular depois
+                telefone="",  # se desejar manipular
                 data_inicio=data_iso(di_br),
                 data_fim=data_iso(df_br)
             )
-            st.success(f"Remédio ID {edit_id} atualizado!")
-            # Limpa e volta p/ Gerenciamento
+            st.success(f"Remédio ID {edit_id} atualizado com sucesso!")
+            # Limpamos o ID e voltamos para Gerenciamento
             st.session_state["edit_id"] = None
             st.session_state["aba_ativa"] = 0
             st.rerun()
@@ -121,29 +115,29 @@ def tela_cadastro_edicao():
             st.session_state["aba_ativa"] = 0
             st.info("Edição cancelada.")
             st.rerun()
-
     else:
         st.subheader("Cadastrar Novo Remédio")
+
         nome = st.text_input("Nome")
-        qtd = st.text_input("Quantidade (ex: 5ml)")
+        qtd = st.text_input("Quantidade (ex: 5ml, 1 comprimido)")
         freq = st.text_input("Frequência (ex: a cada 8 horas)")
         dt_i = st.date_input("Data Início", datetime.date.today())
         dt_f = st.date_input("Data Fim", datetime.date.today())
 
         if st.button("Salvar"):
             if not (nome and qtd and freq):
-                st.warning("Preencha todos os campos.")
+                st.warning("Preencha todos os campos obrigatórios.")
                 return
             inserir_remedio(
                 nome=nome,
                 quantidade=qtd,
                 frequencia=freq,
-                telefone="",
+                telefone="",  # se desejar armazenar
                 data_inicio=dt_i.strftime("%Y-%m-%d"),
                 data_fim=dt_f.strftime("%Y-%m-%d")
             )
-            st.success("Remédio cadastrado!")
-            # Retorna para Gerenciamento
+            st.success("Remédio cadastrado com sucesso!")
+            # Retorna à aba Gerenciamento
             st.session_state["aba_ativa"] = 0
             st.rerun()
 
@@ -153,9 +147,9 @@ def main():
 
     create_table()
 
-    # Definimos a aba inicial se não existir
+    # Inicializa a aba se não existir
     if "aba_ativa" not in st.session_state:
-        st.session_state["aba_ativa"] = 0  # 0 => Gerenciamento, 1 => Cadastro/Edição
+        st.session_state["aba_ativa"] = 0  # 0 = Gerenciamento, 1 = Cadastro/Edição
 
     abas = st.tabs(["Gerenciamento", "Cadastro/Edição"])
     with abas[0]:
