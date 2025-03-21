@@ -39,7 +39,7 @@ def tela_gerenciamento():
         # Limpa qualquer ID em edição
         st.session_state["edit_id"] = None
         st.session_state["aba_ativa"] = 1
-        st.experimental_rerun()  # Redireciona imediatamente para a outra aba
+        st.rerun()  # Redireciona imediatamente para a outra aba
 
     dados = listar_remedios()  # itens excluido='N'
     if not dados:
@@ -76,19 +76,19 @@ def tela_gerenciamento():
             st.session_state["edit_fim"] = data_br(df)
 
             st.session_state["aba_ativa"] = 1
-            st.experimental_rerun()  # Força recarregar, indo para aba de cadastro/edição
+            st.rerun()  # Força recarregar, indo para aba de cadastro/edição
 
         if excluir:
             marcar_excluido(rid)  # excluido='S'
             st.warning(f"Remédio ID {rid} foi excluído.")
-            st.experimental_rerun()  # Atualiza a listagem (item some)
+            st.rerun()  # Atualiza a listagem (item some)
 
 def tela_cadastro_edicao():
     """
     Aba de Cadastro/Edição:
       - Se 'edit_id' estiver definido, entramos em modo edição
       - Caso contrário, novo cadastro
-      - Após Salvar/Cancelar, chamamos st.experimental_rerun() para atualizar
+      - Após Salvar/Cancelar, chamamos st.rerun() para atualizar
     """
     edit_id = st.session_state.get("edit_id", None)
     if edit_id is not None:
@@ -114,13 +114,13 @@ def tela_cadastro_edicao():
             # Limpa e volta p/ Gerenciamento
             st.session_state["edit_id"] = None
             st.session_state["aba_ativa"] = 0
-            st.experimental_rerun()
+            st.rerun()
 
         if st.button("Cancelar"):
             st.session_state["edit_id"] = None
             st.session_state["aba_ativa"] = 0
             st.info("Edição cancelada.")
-            st.experimental_rerun()
+            st.rerun()
 
     else:
         st.subheader("Cadastrar Novo Remédio")
@@ -145,7 +145,7 @@ def tela_cadastro_edicao():
             st.success("Remédio cadastrado!")
             # Retorna para Gerenciamento
             st.session_state["aba_ativa"] = 0
-            st.experimental_rerun()
+            st.rerun()
 
 def main():
     st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
