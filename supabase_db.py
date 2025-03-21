@@ -31,21 +31,31 @@ def inserir_remedio(nome: str,
     }
     supabase.table("remedios").insert(data).execute()
 
-def listar_remedios() -> List[Tuple]:
-    result = supabase.table("remedios").select("*").execute()
-    rows = result.data  # lista de dicionários
-    remedios = []
-    for r in rows:
-        remedios.append((
+def listar_remedios():
+    """
+    Retorna todos os registros com excluido = 'N'.
+    A coluna 'excluido' deve existir no BD (TEXT, default 'N').
+    """
+    result = supabase.table("remedios") \
+        .select("id, nome, quantidade, frequencia, telefone, data_inicio, data_fim, excluido") \
+        .eq("excluido", "N") \
+        .execute()
+    
+    data = result.data  # lista de dicionários
+    dados = []
+    for r in data:
+        dados.append((
             r["id"],
             r["nome"],
             r["quantidade"],
             r["frequencia"],
             r["telefone"],
             r["data_inicio"],
-            r["data_fim"]
+            r["data_fim"],
+            r["excluido"]
         ))
-    return remedios
+    return dados
+
 
 def remover_remedio(remedio_id: int) -> None:
     supabase.table("remedios").delete().eq("id", remedio_id).execute()
