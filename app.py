@@ -11,7 +11,10 @@ from supabase_db import (
 )
 
 def formatar_data_br(data_iso: str) -> str:
-    """ Converte 'YYYY-MM-DD' para 'DD/MM/AAAA'. """
+    """
+    Converte 'YYYY-MM-DD' para 'DD/MM/AAAA'.
+    Se o formato estiver incorreto, retorna a string original.
+    """
     if not data_iso:
         return ""
     try:
@@ -21,7 +24,10 @@ def formatar_data_br(data_iso: str) -> str:
         return data_iso
 
 def formatar_data_iso(data_str: str) -> str:
-    """ Converte 'DD/MM/AAAA' para 'YYYY-MM-DD'. """
+    """
+    Converte 'DD/MM/AAAA' para 'YYYY-MM-DD'.
+    Se o formato estiver incorreto, retorna a string original.
+    """
     try:
         dt = datetime.datetime.strptime(data_str, "%d/%m/%Y")
         return dt.strftime("%Y-%m-%d")
@@ -43,12 +49,12 @@ def exibir_cadastro():
             st.error("Preencha todos os campos obrigatórios.")
             return
 
+        # Armazena no banco em formato ISO
         inserir_remedio(
             nome=nome,
             quantidade=quantidade,
             frequencia=frequencia,
             telefone=telefone,
-            # Armazena no banco em formato ISO
             data_inicio=data_inicio.strftime("%Y-%m-%d"),
             data_fim=data_fim.strftime("%Y-%m-%d")
         )
@@ -92,7 +98,7 @@ def exibir_gerenciamento():
         remover_btn = linha[8].button("❌", key=f"del_{r_id}", help="Remover este remédio")
 
         if editar_btn:
-            # Prepara dados no session_state, para exibir o formulário no final.
+            # Guarda dados no session_state para exibir formulário de edição no final
             st.session_state["edit_id"] = r_id
             st.session_state["edit_nome"] = r_nome
             st.session_state["edit_qtd"] = r_qtd
@@ -105,15 +111,14 @@ def exibir_gerenciamento():
             remover_remedio(r_id)
             st.warning(f"Remédio ID {r_id} removido!")
             # NÃO chamamos st.experimental_rerun()
-            # A própria interação do botão já faz o Streamlit rodar todo o script novamente.
-            # Como o item já foi removido do DB, ele não aparece mais na tabela.
+            # O clique do botão já reexecuta o app, e o item some da lista.
 
-    # Exibe o formulário de edição, se houver um 'edit_id' guardado
+    # Se houver um ID em edição, exibir o formulário no final da página
     if "edit_id" in st.session_state and st.session_state["edit_id"] is not None:
         exibir_form_edicao()
 
 def exibir_form_edicao():
-    """Formulário de edição que aparece quando se clica em ✏️."""
+    """Formulário de edição que aparece abaixo da tabela quando clica em ✏️."""
     st.markdown("---")
     st.markdown("## Editar Remédio")
 
@@ -123,7 +128,7 @@ def exibir_form_edicao():
     freq = st.text_input("Frequência", st.session_state["edit_freq"])
     tel = st.text_input("Telefone (WhatsApp)", st.session_state["edit_tel"])
 
-    # Campos de data em PT-BR (texto simples)
+    # Campos de data em PT-BR (digitados como texto)
     data_inicio_br = st.text_input("Data Início (DD/MM/AAAA)", st.session_state["edit_inicio_br"])
     data_fim_br = st.text_input("Data Fim (DD/MM/AAAA)", st.session_state["edit_fim_br"])
 
@@ -144,28 +149,29 @@ def exibir_form_edicao():
 
         # Limpa o ID de edição
         st.session_state["edit_id"] = None
-        # Não chamamos st.experimental_rerun()
-        # Nova interação do usuário (este clique) já vai forçar a reexecução do script
+        # Não chamamos st.rerun()
+        # A interação do botão "Salvar" já faz o Streamlit recarregar o script
 
     if st.button("Cancelar"):
         st.session_state["edit_id"] = None
         st.info("Edição cancelada.")
-        # Novamente, não precisamos de st.experimental_rerun()
+        # Também não chamamos st.rerun()
 
 def main():
     st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
     st.title("Gerenciador de Remédios (Supabase)")
 
-    create_table()  # se já existe, não faz nada
+    create_table()  # Se a tabela já existe, não faz nada
 
-    tabs = st.tabs(["Cadastro", "Gerenciamento"])
-    with tabs[0]:
+    abas = st.tabs(["Cadastro", "Gerenciamento"])
+    with abas[0]:
         exibir_cadastro()
-    with tabs[1]:
+    with abas[1]:
         exibir_gerenciamento()
 
 if __name__ == "__main__":
-    # Inicializa valores se necessário
+    # Inicializa session_state do Edit ID caso não exista
     if "edit_id" not in st.session_state:
         st.session_state["edit_id"] = None
+
     main()
