@@ -48,29 +48,21 @@ def exibir_cadastro():
             quantidade=quantidade,
             frequencia=frequencia,
             telefone=telefone,
-            data_inicio=data_inicio.strftime("%Y-%m-%d"),  # Armazenamos em ISO
+            # Armazena no banco em formato ISO
+            data_inicio=data_inicio.strftime("%Y-%m-%d"),
             data_fim=data_fim.strftime("%Y-%m-%d")
         )
         st.success(f"Remédio '{nome}' cadastrado com sucesso!")
 
 def exibir_gerenciamento():
     st.subheader("Gerenciamento de Remédios")
-    dados = listar_remedios()
 
+    dados = listar_remedios()
     if not dados:
         st.info("Não há remédios cadastrados.")
         return
 
-    # Cabeçalhos
-    # 1 col p/ ID
-    # 2 col p/ Nome
-    # 2 col p/ Qtd
-    # 2 col p/ Freq
-    # 3 col p/ Telefone
-    # 2 col p/ Início
-    # 2 col p/ Término
-    # 1 col p/ Editar
-    # 1 col p/ Remover
+    # Cabeçalhos (9 colunas)
     cab = st.columns([1, 2, 2, 2, 3, 2, 2, 1, 1])
     cab[0].markdown("**ID**")
     cab[1].markdown("**Nome**")
@@ -100,7 +92,7 @@ def exibir_gerenciamento():
         remover_btn = linha[8].button("❌", key=f"del_{r_id}", help="Remover este remédio")
 
         if editar_btn:
-            # Salvar dados no session_state p/ exibir formulário de edição
+            # Prepara dados no session_state, para exibir o formulário no final.
             st.session_state["edit_id"] = r_id
             st.session_state["edit_nome"] = r_nome
             st.session_state["edit_qtd"] = r_qtd
@@ -112,23 +104,26 @@ def exibir_gerenciamento():
         if remover_btn:
             remover_remedio(r_id)
             st.warning(f"Remédio ID {r_id} removido!")
-            # Ao invés de chamar experimental_rerun diretamente, seta um flag
-            st.session_state["need_rerun"] = True
+            # NÃO chamamos st.experimental_rerun()
+            # A própria interação do botão já faz o Streamlit rodar todo o script novamente.
+            # Como o item já foi removido do DB, ele não aparece mais na tabela.
 
-    # Se o usuário clicou em EDITAR, exibir o formulário
+    # Exibe o formulário de edição, se houver um 'edit_id' guardado
     if "edit_id" in st.session_state and st.session_state["edit_id"] is not None:
         exibir_form_edicao()
 
 def exibir_form_edicao():
+    """Formulário de edição que aparece quando se clica em ✏️."""
     st.markdown("---")
     st.markdown("## Editar Remédio")
-    r_id = st.session_state["edit_id"]
 
+    r_id = st.session_state["edit_id"]
     nome = st.text_input("Nome", st.session_state["edit_nome"])
     qtd = st.text_input("Quantidade", st.session_state["edit_qtd"])
     freq = st.text_input("Frequência", st.session_state["edit_freq"])
     tel = st.text_input("Telefone (WhatsApp)", st.session_state["edit_tel"])
 
+    # Campos de data em PT-BR (texto simples)
     data_inicio_br = st.text_input("Data Início (DD/MM/AAAA)", st.session_state["edit_inicio_br"])
     data_fim_br = st.text_input("Data Fim (DD/MM/AAAA)", st.session_state["edit_fim_br"])
 
@@ -147,20 +142,21 @@ def exibir_form_edicao():
         )
         st.success(f"Remédio ID {r_id} atualizado com sucesso!")
 
-        # Limpa ID de edição
+        # Limpa o ID de edição
         st.session_state["edit_id"] = None
-        st.session_state["need_rerun"] = True  # avisa que precisamos rerodar a tela
+        # Não chamamos st.experimental_rerun()
+        # Nova interação do usuário (este clique) já vai forçar a reexecução do script
 
     if st.button("Cancelar"):
         st.session_state["edit_id"] = None
-        st.session_state["need_rerun"] = True
         st.info("Edição cancelada.")
+        # Novamente, não precisamos de st.experimental_rerun()
 
 def main():
     st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
     st.title("Gerenciador de Remédios (Supabase)")
 
-    create_table()
+    create_table()  # se já existe, não faz nada
 
     tabs = st.tabs(["Cadastro", "Gerenciamento"])
     with tabs[0]:
@@ -168,15 +164,8 @@ def main():
     with tabs[1]:
         exibir_gerenciamento()
 
-    # Ao final do script, checa se need_rerun foi setado
-    if st.session_state.get("need_rerun"):
-        # Zera o flag
-        st.session_state["need_rerun"] = False
-        # Agora sim forçamos o rerun
-        st.experimental_rerun()
-
 if __name__ == "__main__":
-    # Inicializa se não existir:
-    if "need_rerun" not in st.session_state:
-        st.session_state["need_rerun"] = False
+    # Inicializa valores se necessário
+    if "edit_id" not in st.session_state:
+        st.session_state["edit_id"] = None
     main()

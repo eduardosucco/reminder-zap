@@ -57,10 +57,7 @@ def atualizar_remedio(remedio_id: int,
                       telefone: str,
                       data_inicio: str,
                       data_fim: str) -> None:
-    """
-    Atualiza as informações de um remédio pelo ID, alterando os campos.
-    As datas devem ser passadas em formato YYYY-MM-DD.
-    """
+    # Exemplo supabase-py
     supabase.table("remedios") \
         .update({
             "nome": nome,
