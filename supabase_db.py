@@ -12,39 +12,26 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.e
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
 
 def create_table():
-    # Caso já tenha criado a tabela no painel do Supabase, não precisa fazer nada aqui.
+    """
+    Se você já criou a tabela manualmente ou via SQL, esta função pode ser apenas um "pass".
+    Aqui como exemplo, deixo vazio.
+    """
     pass
-
-def inserir_remedio(nome: str,
-                    quantidade: str,
-                    frequencia: str,
-                    telefone: str,
-                    data_inicio: str,
-                    data_fim: str) -> None:
-    data = {
-        "nome": nome,
-        "quantidade": quantidade,
-        "frequencia": frequencia,
-        "telefone": telefone,
-        "data_inicio": data_inicio,
-        "data_fim": data_fim
-    }
-    supabase.table("remedios").insert(data).execute()
 
 def listar_remedios():
     """
-    Retorna todos os registros com excluido = 'N'.
-    A coluna 'excluido' deve existir no BD (TEXT, default 'N').
+    Retorna apenas os registros com 'excluido' = 'N', preservando os dados de quem foi excluído logicamente.
+    Retorna uma lista de tuplas: (id, nome, qtd, freq, telefone, data_inicio, data_fim, excluido)
     """
-    result = supabase.table("remedios") \
+    resp = supabase.table("remedios") \
         .select("id, nome, quantidade, frequencia, telefone, data_inicio, data_fim, excluido") \
         .eq("excluido", "N") \
         .execute()
     
-    data = result.data  # lista de dicionários
-    dados = []
+    data = resp.data  # lista de dicionários
+    resultado = []
     for r in data:
-        dados.append((
+        resultado.append((
             r["id"],
             r["nome"],
             r["quantidade"],
@@ -52,22 +39,26 @@ def listar_remedios():
             r["telefone"],
             r["data_inicio"],
             r["data_fim"],
-            r["excluido"]
+            r["excluido"]  # 'N'
         ))
-    return dados
+    return resultado
 
+def inserir_remedio(nome, quantidade, frequencia, telefone, data_inicio, data_fim):
+    """Insere um novo registro em 'remedios' (excluido='N' por default)."""
+    supabase.table("remedios").insert({
+        "nome": nome,
+        "quantidade": quantidade,
+        "frequencia": frequencia,
+        "telefone": telefone,
+        "data_inicio": data_inicio,  # formato YYYY-MM-DD
+        "data_fim": data_fim,        # formato YYYY-MM-DD
+        "excluido": "N"
+    }).execute()
 
-def remover_remedio(remedio_id: int) -> None:
-    supabase.table("remedios").delete().eq("id", remedio_id).execute()
-
-def atualizar_remedio(remedio_id: int,
-                      nome: str,
-                      quantidade: str,
-                      frequencia: str,
-                      telefone: str,
-                      data_inicio: str,
-                      data_fim: str) -> None:
-    # Exemplo supabase-py
+def atualizar_remedio(remedio_id, nome, quantidade, frequencia, telefone, data_inicio, data_fim):
+    """
+    Atualiza os campos do remédio, sem mexer em 'excluido'.
+    """
     supabase.table("remedios") \
         .update({
             "nome": nome,
@@ -80,5 +71,9 @@ def atualizar_remedio(remedio_id: int,
         .eq("id", remedio_id) \
         .execute()
 
-def marcar_excluido(remedio_id: int):
-    supabase.table("remedios").update({"excluido": "S"}).eq("id", remedio_id).execute()
+def marcar_excluido(remedio_id):
+    """Marca o remedio como excluido (S), mantendo-o no banco, mas fora da listagem."""
+    supabase.table("remedios") \
+        .update({"excluido": "S"}) \
+        .eq("id", remedio_id) \
+        .execute()
