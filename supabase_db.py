@@ -69,3 +69,6 @@ def atualizar_remedio(remedio_id: int,
         }) \
         .eq("id", remedio_id) \
         .execute()
+
+def marcar_excluido(remedio_id: int):
+    supabase.table("remedios").update({"excluido": "S"}).eq("id", remedio_id).execute()
