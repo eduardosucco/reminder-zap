@@ -2,6 +2,7 @@ import streamlit as st
 import datetime
 import pandas as pd
 
+# Importe suas funções de banco (Supabase)
 from supabase_db import (
     create_table,
     inserir_remedio,
@@ -10,26 +11,34 @@ from supabase_db import (
     atualizar_remedio
 )
 
-# Converte data ISO (YYYY-MM-DD) -> PT-BR (DD/MM/AAAA)
-def data_br(data_iso):
+# ===================== FUNÇÕES DE FORMATO DE DATA =====================
+
+def data_para_br(data_iso: str) -> str:
+    """Converte YYYY-MM-DD para DD/MM/AAAA."""
+    if not data_iso:
+        return ""
     try:
-        return datetime.datetime.strptime(data_iso, "%Y-%m-%d").strftime("%d/%m/%Y")
-    except:
+        dt = datetime.datetime.strptime(data_iso, "%Y-%m-%d")
+        return dt.strftime("%d/%m/%Y")
+    except ValueError:
         return data_iso
 
-# Converte data PT-BR (DD/MM/AAAA) -> ISO (YYYY-MM-DD)
-def data_iso(data_str):
+def data_para_iso(data_br: str) -> str:
+    """Converte DD/MM/AAAA para YYYY-MM-DD."""
     try:
-        return datetime.datetime.strptime(data_str, "%d/%m/%Y").strftime("%Y-%m-%d")
-    except:
-        return data_str
+        dt = datetime.datetime.strptime(data_br, "%d/%m/%Y")
+        return dt.strftime("%Y-%m-%d")
+    except ValueError:
+        return data_br
+
+# ===================== TELAS =====================
 
 def tela_cadastro():
-    st.subheader("Cadastrar Remédio")
+    st.subheader("Cadastro de Remédios")
+
     nome = st.text_input("Nome")
-    qtd = st.text_input("Quantidade (ex: 5ml, 1 comprimido)")
-    freq = st.text_input("Frequência (ex: a cada 8 horas)")
-    # Telefone é cadastrado, mas não exibido na tabela
+    qtd = st.text_input("Quantidade (ex: 5ml)")
+    freq = st.text_input("Frequência (ex: a cada 8h)")
     tel = st.text_input("Telefone (WhatsApp)")
     data_i = st.date_input("Data Início", datetime.date.today())
     data_f = st.date_input("Data Fim", datetime.date.today())
@@ -43,94 +52,125 @@ def tela_cadastro():
             quantidade=qtd,
             frequencia=freq,
             telefone=tel,
-            data_inicio=data_i.strftime("%Y-%m-%d"), 
+            data_inicio=data_i.strftime("%Y-%m-%d"),
             data_fim=data_f.strftime("%Y-%m-%d")
         )
-        st.success("Remédio cadastrado com sucesso!")
+        st.success("Remédio cadastrado!")
+
+    if st.button("Ir para Listagem"):
+        st.session_state["page"] = "listagem"
 
 def tela_listagem():
-    st.subheader("Listagem de Remédios")
-    registros = listar_remedios()
+    st.subheader("Lista de Remédios")
+
+    registros = listar_remedios()  # (id, nome, qtd, freq, tel, data_i, data_f)
     if not registros:
         st.info("Nenhum remédio encontrado.")
+    else:
+        # Monta DataFrame sem telefone
+        df_data = []
+        for (rid, nome, qtd, freq, _tel, di, df) in registros:
+            df_data.append({
+                "ID": rid,
+                "Nome": nome,
+                "Quantidade": qtd,
+                "Frequência": freq,
+                "Início": data_para_br(di),
+                "Término": data_para_br(df)
+            })
+        df = pd.DataFrame(df_data)
+        st.dataframe(df, use_container_width=True)
+
+    st.markdown("### Ações")
+    id_acao = st.number_input("Informe o ID", min_value=1, value=1, step=1)
+
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        if st.button("Editar"):
+            # Verifica se existe esse ID na lista
+            existe = any(r[0] == id_acao for r in registros)
+            if existe:
+                st.session_state["id_edicao"] = id_acao
+                st.session_state["page"] = "edicao"
+            else:
+                st.warning("ID não encontrado.")
+
+    with col2:
+        if st.button("Remover"):
+            remover_remedio(id_acao)
+            st.success(f"Remédio ID {id_acao} removido.")
+
+    with col3:
+        if st.button("Cadastrar Novo"):
+            st.session_state["page"] = "cadastro"
+
+def tela_edicao():
+    st.subheader("Edição de Remédio")
+
+    # Carrega ID
+    rid = st.session_state.get("id_edicao", None)
+    if not rid:
+        st.error("Nenhum ID em edição.")
+        if st.button("Voltar à Listagem"):
+            st.session_state["page"] = "listagem"
         return
 
-    # registros: (id, nome, quantidade, frequencia, telefone, data_inicio, data_fim)
-    # Ocultamos 'telefone' na tabela
-    df_data = []
-    for (rid, nome, qtd, freq, _tel, di, df) in registros:
-        df_data.append({
-            "ID": rid,
-            "Nome": nome,
-            "Quantidade": qtd,
-            "Frequência": freq,
-            "Início": data_br(di),
-            "Término": data_br(df)
-        })
-    df = pd.DataFrame(df_data)
-    st.dataframe(df, use_container_width=True)
+    # Busca no banco
+    registros = listar_remedios()
+    registro = next((r for r in registros if r[0] == rid), None)
+    if not registro:
+        st.error("ID não encontrado no banco.")
+        if st.button("Voltar à Listagem"):
+            st.session_state["page"] = "listagem"
+        return
 
-    # REMOVER - Digita o ID e remove
-    st.markdown("### Remover Remédio")
-    id_rm = st.number_input("ID para Remover", min_value=0, value=0)
-    if st.button("Remover"):
-        if id_rm > 0:
-            remover_remedio(id_rm)
-            st.success(f"Remédio ID {id_rm} removido.")
-        else:
-            st.warning("Informe um ID válido.")
+    # registro => (id, nome, qtd, freq, tel, data_i, data_f)
+    _, nome, qtd, freq, tel, di_iso, df_iso = registro
 
-    # EDITAR - Digita o ID e edita
-    st.markdown("### Editar Remédio")
-    id_ed = st.number_input("ID para Editar", min_value=0, value=0)
-    if st.button("Carregar Dados"):
-        if id_ed <= 0:
-            st.warning("Informe um ID válido.")
-        else:
-            # Localiza o registro com aquele ID
-            reg = next((r for r in registros if r[0] == id_ed), None)
-            if not reg:
-                st.error("Não foi encontrado esse ID.")
-            else:
-                editar_remedio(reg)
+    nome_novo = st.text_input("Nome", nome)
+    qtd_novo = st.text_input("Quantidade", qtd)
+    freq_novo = st.text_input("Frequência", freq)
+    tel_novo = st.text_input("Telefone", tel)
 
-def editar_remedio(registro):
-    # registro: (id, nome, qtd, freq, tel, data_i, data_f)
-    rid, nome, qtd, freq, tel, di, df = registro
-    st.write(f"**Editando o ID {rid}**")
-
-    # Campos para edição
-    novo_nome = st.text_input("Nome", nome)
-    nova_qtd = st.text_input("Quantidade", qtd)
-    nova_freq = st.text_input("Frequência", freq)
-    # Telefone não é exibido na listagem, mas editamos aqui se quiser
-    novo_tel = st.text_input("Telefone (WhatsApp)", tel)
-    novo_di_br = st.text_input("Data Início (DD/MM/AAAA)", data_br(di))
-    novo_df_br = st.text_input("Data Fim (DD/MM/AAAA)", data_br(df))
+    di_br = st.text_input("Data Início (DD/MM/AAAA)", data_para_br(di_iso))
+    df_br = st.text_input("Data Fim (DD/MM/AAAA)", data_para_br(df_iso))
 
     if st.button("Salvar Alterações"):
         atualizar_remedio(
             remedio_id=rid,
-            nome=novo_nome,
-            quantidade=nova_qtd,
-            frequencia=nova_freq,
-            telefone=novo_tel,
-            data_inicio=data_iso(novo_di_br),
-            data_fim=data_iso(novo_df_br)
+            nome=nome_novo,
+            quantidade=qtd_novo,
+            frequencia=freq_novo,
+            telefone=tel_novo,
+            data_inicio=data_para_iso(di_br),
+            data_fim=data_para_iso(df_br)
         )
-        st.success("Remédio atualizado com sucesso.")
+        st.success("Remédio atualizado!")
+        st.session_state["page"] = "listagem"
+
+    if st.button("Cancelar"):
+        st.session_state["page"] = "listagem"
+
+# ===================== MAIN =====================
 
 def main():
-    st.set_page_config(page_title="Gerenciador de Remédios", layout="centered")
+    st.set_page_config(page_title="Remédios", layout="centered")
     st.title("Gerenciador de Remédios (Supabase)")
 
-    create_table()  # Caso não exista, mas normalmente já criado
+    create_table()  # Se tabela já existe, não faz nada
 
-    abas = st.tabs(["Cadastro", "Listagem"])
-    with abas[0]:
+    # Define a página atual
+    if "page" not in st.session_state:
+        st.session_state["page"] = "cadastro"  # default
+
+    if st.session_state["page"] == "cadastro":
         tela_cadastro()
-    with abas[1]:
+    elif st.session_state["page"] == "listagem":
         tela_listagem()
+    elif st.session_state["page"] == "edicao":
+        tela_edicao()
+    else:
+        st.error("Página inválida.")
 
 if __name__ == "__main__":
     main()
